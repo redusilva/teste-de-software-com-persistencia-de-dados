@@ -1,14 +1,28 @@
-const { execSync } = require('child_process');
 const prisma = require('./config/db');
 
 const DATABASE_URL = process.env.DATABASE_URL;
 const databaseName = DATABASE_URL.split('@localhost:3306/')[1];
 
+const cleanDatabase = async () => {
+    await prisma.$transaction([
+        prisma.participantes.deleteMany(),
+        prisma.auction.deleteMany(),
+    ]);
+}
+
+const resetAutoIncrement = async () => {
+    const tables = ['participantes', 'auction'];
+
+    for (const table of tables) {
+        await prisma.$executeRawUnsafe(`ALTER TABLE ${table} AUTO_INCREMENT = 1;`);
+    }
+}
+
 beforeEach(async () => {
-    execSync(`DATABASE_URL="${DATABASE_URL}" npx prisma migrate deploy`);
+    await cleanDatabase();
+    await resetAutoIncrement();
 });
 
-afterEach(async () => {
-    await prisma.$executeRawUnsafe(`DROP DATABASE IF EXISTS \`${databaseName}\``);
+afterAll(async () => {
+    await cleanDatabase();
 });
-
